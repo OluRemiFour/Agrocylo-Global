@@ -2,7 +2,9 @@ import { EscrowEventParser } from "./escrowEventParser.js";
 import { EscrowEventMapper } from "./escrowEventMapper.js";
 import { EscrowEventRepository } from "./escrowEventRepository.js";
 import { EscrowEventProjectionService } from "./escrowEventProjectionService.js";
+import { NotificationService } from "../notificationService.js";
 import logger from "../../config/logger.js";
+import type { RawRpcEvent } from "../../types/rawRpcEvent.js";
 
 /**
  * EscrowEventIngestionService: The public entrypoint for processing each event.
@@ -11,7 +13,7 @@ export class EscrowEventIngestionService {
   /**
    * Main flow to ingest a single raw event.
    */
-  static async ingestEvent(rawEvent: any) {
+  static async ingestEvent(rawEvent: RawRpcEvent) {
     try {
       // 1. Parse
       const parsed = EscrowEventParser.parse(rawEvent);
@@ -25,7 +27,15 @@ export class EscrowEventIngestionService {
       logger.info(`Escrow event stored in DB: ${record.id}`);
 
       // --- NEW: Project to Application Domain (Issue #44) ---
-      await EscrowEventProjectionService.projectEvent(record);
+      await EscrowEventProjectionService.projectEvent(mapped);
+
+      // --- NEW: Implement Notification System for Disputes ---
+      if (mapped.action === "dispute" || mapped.action === "resolved") {
+        await NotificationService.notifyOrderEvent(
+          mapped.action === "dispute" ? "dispute_opened" : "dispute_resolved",
+          mapped
+        );
+      }
 
       return record;
     } catch (error) {

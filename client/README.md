@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AgroCylo Frontend Setup
 
-## Getting Started
+Welcome to the AgroCylo frontend repository. This document outlines the setup, architecture, and environment configuration.
 
-First, run the development server:
+## Setup
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Wallet Setup
+
+We use Freighter for interacting with the Stellar network.
+- Download and install the [Freighter browser extension](https://www.freighter.app/).
+- Set up a wallet and switch to the **Testnet**.
+- Fund your Testnet account using the [Stellar Laboratory Faucet](https://laboratory.stellar.org/#account-creator?network=test).
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in the required values:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Required Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend base URL for REST + Socket.io |
+| `NEXT_PUBLIC_CONTRACT_ID` | Deployed Agrocylo escrow contract ID |
+| `NEXT_PUBLIC_NATIVE_TOKEN_CONTRACT_ID` | XLM Stellar Asset Contract address |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Optional Variables
 
-## Learn More
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SOROBAN_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC endpoint |
+| `NEXT_PUBLIC_NETWORK_PASSPHRASE` | `Test SDF Network ; September 2015` | Stellar network passphrase |
+| `NEXT_PUBLIC_TOKEN_CONTRACT_ID` | — | Fallback token contract (legacy) |
+| `NEXT_PUBLIC_TOKEN_CONTRACT_ID_USDC` | — | USDC token contract (cart/checkout) |
+| `NEXT_PUBLIC_TOKEN_CONTRACT_ID_STRK` | — | STRK token contract (cart/checkout) |
 
-To learn more about Next.js, take a look at the following resources:
+> `.env.example` is the canonical reference. If you add a new environment variable, add it there first with a clear comment.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Testnet Values
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
 
-## Deploy on Vercel
+# Testnet XLM SAC
+NEXT_PUBLIC_NATIVE_TOKEN_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Mainnet Values
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+NEXT_PUBLIC_SOROBAN_RPC_URL=https://rpc.mainnet.stellar.org
+NEXT_PUBLIC_NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+```
+
+## Architecture Overview
+
+- **Framework**: Next.js App Router (React islands)
+- **State & Data**: React hooks, Zustand, and React Query (for async data/RPC calls)
+- **Wallet Integration**: Freighter API integration for signing and submitting transactions to Soroban.
+- **Contract Calls**: Uses `@stellar/stellar-sdk` and auto-generated contract client bindings.
+- **API Layer**: All backend REST calls go through a shared API helper at `src/lib/apiHelper.ts` with consistent error shapes.
+- **Notifications**: WebSocket integration for real-time order/dispute updates.
+- **Onboarding Flow**: Multi-step wizard with built-in geolocation and robust async state handling.
+
+## Local Development
+
+Run the frontend in isolation or alongside the backend. Use `testMode.ts` (if applicable) for mocking wallet behaviors during CI/CD.
+
+## Troubleshooting
+
+### Missing contract ID errors
+Set `NEXT_PUBLIC_CONTRACT_ID` in `.env.local` to the deployed escrow contract address. The frontend will not render on-chain features without it.
+
+### Unreachable backend
+Ensure the backend server is running on the port matching `NEXT_PUBLIC_API_URL`. The frontend expects a running backend for REST and WebSocket connections.
+
+### Freighter wallet not detected
+Install the [Freighter browser extension](https://www.freighter.app/), switch to Testnet, and fund your account via the [Stellar Laboratory Faucet](https://laboratory.stellar.org/#account-creator?network=test).
